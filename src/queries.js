@@ -1,0 +1,14 @@
+export const DROP_MEASUREMENTS_TABLE = "DROP TABLE IF EXISTS measurements";
+
+export const CREATE_MEASUREMENTS_TABLE = `
+CREATE TABLE IF NOT EXISTS measurements(
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    feet INTEGER NOT NULL,
+    inches INTEGER NOT NULL
+)`;
+
+export default {
+  DROP_MEASUREMENTS_TABLE,
+  CREATE_MEASUREMENTS_TABLE,
+};
