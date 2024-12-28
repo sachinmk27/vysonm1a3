@@ -8,7 +8,141 @@ CREATE TABLE IF NOT EXISTS measurements(
     inches INTEGER NOT NULL
 )`;
 
+export const DROP_USERS_TABLE = "DROP TABLE IF EXISTS users";
+
+export const CREATE_USERS_TABLE = `
+CREATE TABLE IF NOT EXISTS users(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP
+)
+`;
+
+export const DROP_POSTS_TABLE = "DROP TABLE IF EXISTS posts";
+
+export const CREATE_POSTS_TABLE = `
+CREATE TABLE IF NOT EXISTS posts(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  content TEXT NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  user_id INTEGER NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+)
+`;
+
+export const DROP_LIKES_TABLE = "DROP TABLE IF EXISTS likes";
+export const CREATE_LIKES_TABLE = `
+CREATE TABLE IF NOT EXISTS likes(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  post_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+)
+`;
+export const CREATE_REACTIONS_TABLE = `
+CREATE TABLE IF NOT EXISTS reactions(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  post_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  reaction TEXT CHECK ( reaction in 
+    ('like',
+      'celebrate',
+      'love',
+      'insightful',
+      'curious')) 
+    DEFAULT 'like',
+  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+)`;
+export const INSERT_FROM_LIKES_TO_REACTIONS = `
+  INSERT INTO reactions(id, created_at, post_id, user_id)
+    SELECT id, created_at, post_id, user_id
+    FROM likes
+`;
+
+export const DROP_REACTIONS_TABLE = "DROP TABLE IF EXISTS reactions";
+export const DROP_NEW_REACTIONS_TABLE = "DROP TABLE IF EXISTS new_reactions";
+export const DROP_REACTION_TYPES_TABLE = "DROP TABLE IF EXISTS reaction_types";
+
+export const CREATE_REACTION_TYPES_TABLE = `
+CREATE TABLE IF NOT EXISTS reaction_types(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL,
+  display_order INTEGER NOT NULL
+)
+`;
+export const INSERT_REACTION_TYPES = `INSERT INTO reaction_types 
+  (id, type, display_order) VALUES 
+    (0, 'like', 0),
+    (1, 'celebrate', 1),
+    (2, 'support', 2),
+    (3, 'funny', 3),
+    (4, 'love', 4),
+    (5, 'insightful', 5),
+    (6, 'curious', 6)`;
+export const INSERT_FROM_REACTIONS_TO_NEW_REACTIONS = `
+INSERT INTO new_reactions 
+  (id, post_id, user_id, reaction_type_id)
+  SELECT 
+    r.id, r.post_id, r.user_id, rt.id 
+  FROM reactions r INNER JOIN reaction_types rt
+  ON r.reaction = rt.type`;
+export const CREATE_NEW_REACTIONS_TABLE = `
+CREATE TABLE IF NOT EXISTS new_reactions(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  post_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  reaction_type_id INTEGER NOT NULL,
+  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (reaction_type_id) REFERENCES reaction_types(id) ON UPDATE CASCADE
+)
+`;
+export const ALTER_REACTIONS_TABLE_ADD_SOFT_DELETE_COLUMN = `
+  ALTER TABLE reaction_types ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0
+`;
+export const UPDATE_REMOVE_CURIOUS_REACTION = `
+  UPDATE reaction_types SET deleted = 1 WHERE type = 'curious'
+`;
+export const UPDATE_MOVE_FUNNY_REACTION_TO_END = `
+UPDATE reaction_types 
+  SET display_order = 
+      (SELECT MAX(display_order) FROM reaction_types) + 1
+  WHERE type = 'funny'`;
+
+export const BEGIN_TRANSACTION = "BEGIN TRANSACTION";
+export const COMMIT_TRANSACTION = "COMMIT";
+
 export default {
+  BEGIN_TRANSACTION,
+  COMMIT_TRANSACTION,
   DROP_MEASUREMENTS_TABLE,
   CREATE_MEASUREMENTS_TABLE,
+
+  DROP_USERS_TABLE,
+  CREATE_USERS_TABLE,
+
+  DROP_POSTS_TABLE,
+  CREATE_POSTS_TABLE,
+
+  DROP_LIKES_TABLE,
+  CREATE_LIKES_TABLE,
+
+  DROP_REACTIONS_TABLE,
+  DROP_NEW_REACTIONS_TABLE,
+  DROP_REACTION_TYPES_TABLE,
+  CREATE_REACTION_TYPES_TABLE,
+  INSERT_REACTION_TYPES,
+  CREATE_REACTIONS_TABLE,
+  CREATE_NEW_REACTIONS_TABLE,
+  INSERT_FROM_LIKES_TO_REACTIONS,
+  INSERT_FROM_REACTIONS_TO_NEW_REACTIONS,
+  ALTER_REACTIONS_TABLE_ADD_SOFT_DELETE_COLUMN,
+  UPDATE_REMOVE_CURIOUS_REACTION,
+  UPDATE_MOVE_FUNNY_REACTION_TO_END,
 };
